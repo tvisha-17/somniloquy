@@ -21,7 +21,11 @@ Three phases deliver the full pipeline: raw EEG data gets inspected and processe
   2. `data/processed/dream/eeg/sub-<id>_epochs.npz` files exist in float32 with shape `(n_epochs, n_channels, n_timepoints)`, validated for NaN and normalization
   3. `data/processed/dream/sub-<id>_target_embeddings.npz` files exist with epoch indices, 384-dim embeddings, and report text
   4. `data/splits/dream_splits.json` exists with subject-level train/val/test splits (no subject in multiple sets)
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Inspect DREAM dataset and write DATASET_CARD.md + inspection_report.json
+- [ ] 01-02-PLAN.md — Preprocess EEG (filter, epoch, reject, normalize) to sub-<id>_epochs.npz
+- [ ] 01-03-PLAN.md — Encode dream reports to 384-dim targets and write subject-level splits
 
 ### Phase 2: Model & Training
 **Goal**: A fine-tuned checkpoint exists that maps REM EEG epochs to semantic embeddings
@@ -50,6 +54,6 @@ Three phases deliver the full pipeline: raw EEG data gets inspected and processe
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Pipeline | 0/TBD | Not started | - |
+| 1. Data Pipeline | 0/3 | Not started | - |
 | 2. Model & Training | 0/TBD | Not started | - |
 | 3. Real-Time Inference & Demo | 0/TBD | Not started | - |
