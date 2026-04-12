@@ -1,0 +1,18 @@
+{
+  "audit": {
+    "tree": [],
+    "ext_counts": {},
+    "total_files": 0
+  },
+  "eeg_sample": null,
+  "reports": {
+    "n_reports": 0,
+    "example_path": null,
+    "avg_length_chars": 0.0,
+    "example_snippet": null
+  },
+  "subjects": [],
+  "known_issues": [
+    "raw_root_missing: data/raw/dream"
+  ]
+}
