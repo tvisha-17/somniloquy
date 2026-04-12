@@ -23,9 +23,9 @@ Three phases deliver the full pipeline: raw EEG data gets inspected and processe
   4. `data/splits/dream_splits.json` exists with subject-level train/val/test splits (no subject in multiple sets)
 **Plans**: 3 plans
 Plans:
-- [ ] 01-01-PLAN.md — Inspect DREAM dataset and write DATASET_CARD.md + inspection_report.json
-- [ ] 01-02-PLAN.md — Preprocess EEG (filter, epoch, reject, normalize) to sub-<id>_epochs.npz
-- [ ] 01-03-PLAN.md — Encode dream reports to 384-dim targets and write subject-level splits
+- [x] 01-01-PLAN.md — Inspect DREAM dataset and write DATASET_CARD.md + inspection_report.json
+- [x] 01-02-PLAN.md — Preprocess EEG (filter, epoch, reject, normalize) to sub-<id>_epochs.npz
+- [x] 01-03-PLAN.md — Encode dream reports to 384-dim targets and write subject-level splits
 
 ### Phase 2: Model & Training
 **Goal**: A fine-tuned checkpoint exists that maps REM EEG epochs to semantic embeddings
