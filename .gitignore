@@ -1,0 +1,40 @@
+# EEG data files
+*.edf
+*.set
+*.fif
+*.vhdr
+*.vmrk
+*.eeg
+
+# Processed data outputs
+data/processed/dream/eeg/
+data/processed/dream/*.npz
+data/processed/dream/**/*.npz
+
+# Model checkpoints
+checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environments
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
