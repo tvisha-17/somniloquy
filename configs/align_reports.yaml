@@ -1,0 +1,7 @@
+epochs_dir: data/processed/dream/eeg/
+reports_root: data/raw/dream/
+report_file_pattern: "sub-*_dream.txt"
+embedding_model: "all-MiniLM-L6-v2"
+embedding_dim: 384
+time_alignment_window: 30.0
+output_dir: data/processed/dream/
