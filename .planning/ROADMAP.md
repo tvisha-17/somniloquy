@@ -54,6 +54,11 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Pipeline | 0/3 | Not started | - |
-| 2. Model & Training | 0/TBD | Not started | - |
-| 3. Real-Time Inference & Demo | 0/TBD | Not started | - |
+| 1. Data Pipeline | 3/3 | Implemented in code | Inspection, preprocessing, alignment, splits |
+| 2. Model & Training | 1/1 | Implemented in code | Decoder wrapper, REM-only trainer, checkpoint save path |
+| 3. Real-Time Inference & Demo | 1/1 | Implemented in code | REM detector, retrieval/abstention, FastAPI demo server |
+
+## Current Blockers
+
+- Real DREAM EEG artifacts are not present in this workspace, so the pipeline cannot yet be exercised end to end on actual recordings.
+- The `zuna` package is not installed in the current environment, so the live backbone path remains unverified even though the adapter and trainer are implemented.

@@ -1,0 +1,24 @@
+eeg_epochs_dir: data/processed/dream/eeg
+target_embeddings_dir: data/processed/dream
+split_file: data/splits/dream_splits.json
+
+zuna_model_name: Zyphra/ZUNA
+latent_dim: 1024
+target_embed_dim: 384
+dropout: 0.3
+
+loss_type: cosine_mse
+cosine_weight: 0.7
+mse_weight: 0.3
+
+batch_size: 32
+lr: 0.0001
+weight_decay: 0.00001
+n_epochs: 30
+warmup_steps: 500
+grad_clip: 1.0
+device: cuda
+
+checkpoint_dir: checkpoints/zuna_finetuned
+log_every_n_steps: 10
+val_every_n_epochs: 5

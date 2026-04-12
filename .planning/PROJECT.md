@@ -46,6 +46,7 @@ A working end-to-end pipeline: REM EEG in → semantically meaningful text out �
 - **ZUNA**: EEG foundation model from Zyphra (`pip install zuna`). Pre-trained denoiser architecture; we bypass diffusion to extract latent features and attach a new head.
 - **Hackathon constraints**: Must satisfy e184 Track requirements — speech decoding, real-world robustness handling (noise, missing channels, short calibration, cross-subject generalization), reject option.
 - **Key honesty constraint**: The system decodes *semantic content*, not exact words. Documentation and demo must be clear about this.
+- **Implementation status**: The repository now contains Phase 1 data-pipeline code, Phase 2 model/training code, and Phase 3 realtime/demo code with tests. Live validation is still blocked on two external prerequisites: real DREAM artifacts and the real `zuna` package.
 
 ## Constraints
 
@@ -83,4 +84,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after initialization*
+*Last updated: 2026-04-11 after Phase 3 implementation*

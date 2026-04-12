@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** REM EEG in → semantically meaningful text out → live dashboard demo that demonstrates dream speech decoding is feasible
-**Current focus:** Phase 1 — Data Pipeline
+**Current focus:** Runtime validation on real DREAM artifacts and the live ZUNA dependency
 
 ## Current Position
 
-Phase: 1 of 3 (Data Pipeline)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-04-11 — Roadmap created
+Phase: 3 of 3 (Real-Time Inference & Demo)
+Plan: Code implementation complete
+Status: Implemented in code, awaiting live validation
+Last activity: 2026-04-11 — Phase 3 realtime/demo stack implemented and test suite passing
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+- Total plans completed: 5
 - Average duration: -
 - Total execution time: -
 
@@ -27,7 +27,9 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 1. Data Pipeline | 3 | - | - |
+| 2. Model & Training | 1 | - | - |
+| 3. Real-Time Inference & Demo | 1 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -48,14 +50,17 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- Run `scripts/finetune_zuna.py` against real aligned DREAM artifacts once `zuna` is installed.
+- Run `scripts/demo_realtime.py` against a real preprocessed `sub-*_epochs.npz` file and checkpoint.
+- Update requirement status from implemented to validated after live runs.
 
 ### Blockers/Concerns
 
-- DREAM dataset file format is unknown until inspection (likely `.edf`) — INSP-01/02 will resolve
+- DREAM artifacts are still absent in this workspace, so no live preprocessing/training/demo run can be executed here.
+- The live `zuna` dependency is unavailable in this environment; the repo uses an injected-backbone adapter for tests until that package is installed.
 
 ## Session Continuity
 
 Last session: 2026-04-11
-Stopped at: Roadmap created, ready to plan Phase 1
-Resume file: None
+Stopped at: All three roadmap phases implemented in code; next step is live validation with DREAM data + `zuna`
+Resume file: `configs/demo_realtime.yaml`

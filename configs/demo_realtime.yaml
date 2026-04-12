@@ -1,0 +1,22 @@
+replay_epoch_file: data/processed/dream/eeg/sub-demo_epochs.npz
+target_embeddings_dir: data/processed/dream
+
+model_mode: checkpoint
+checkpoint_path: checkpoints/zuna_finetuned/best.pt
+zuna_model_name: Zyphra/ZUNA
+latent_dim: 1024
+target_embed_dim: 384
+dropout: 0.3
+device: cpu
+
+host: 127.0.0.1
+port: 8000
+autostart: true
+playback_interval_s: 0.2
+
+rem_threshold: 0.7
+required_consecutive: 3
+top_k: 3
+confidence_threshold: 0.3
+smoothing_window: 5
+required_majority: 3

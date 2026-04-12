@@ -11,7 +11,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import numpy as np
 import pytest
-import mne
+
+mne = pytest.importorskip("mne")
 
 from src.data.preprocess_dream import (
     map_sleep_stages,
