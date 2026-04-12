@@ -1,0 +1,6 @@
+epochs_dir: data/processed/dream/eeg/
+output_path: data/splits/dream_splits.json
+train_ratio: 0.7
+val_ratio: 0.15
+test_ratio: 0.15
+seed: 42
