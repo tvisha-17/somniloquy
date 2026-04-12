@@ -1,0 +1,18 @@
+dataset_name: dream
+raw_root: data/raw/dream
+subjects: all
+l_freq: 0.5
+h_freq: 40.0
+notch_freqs: [50.0]
+epoch_duration: 2.0
+overlap: 0.5
+reject_threshold: 200.0e-6
+target_sfreq: 256
+min_epochs: 100
+sleep_stage_mapping:
+  "0": W
+  "1": N1
+  "2": N2
+  "3": N3
+  "4": REM
+output_dir: data/processed/dream/eeg/
