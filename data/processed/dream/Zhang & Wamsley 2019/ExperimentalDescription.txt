@@ -1,0 +1,108 @@
+Dream EEG and Mentation (DREAM) data set
+
+
+---Data set information---
+
+Common name: Zhang & Wamsley 2019
+Full name: N/A
+Authors: Jing Zhang, Erin Wamsley
+Location: Furman University, Greenville SC
+Year: N/A
+Set ID: 1
+Amendment: 0
+Corresponding author ID: 3
+Download URL: [SET WHEN FINALIZED]
+
+Previous publications:
+Zhang, J., & Wamsley, E. J. (2019). EEG predictors of dreaming outside of REM sleep. Psychophysiology, 56(7), e13368.
+
+Correspondence:
+Dr. Erin Wamsley: erin.wamsely@furman.edu
+
+---Metadata---
+
+Key ID: 1
+Date entered: 2022-03-21T12:46:50+00:00
+Number of samples: 308
+Number of subjects: 28
+Proportion REM: 12%
+Proportion N1: 36%
+Proportion N2: 50%
+Proportion experience: 23%
+Proportion no-experience: 77%
+Proportion healthy: 100%
+Provoked awakening: Yes
+Time of awakening: Mixed
+Form of response: Free
+Date approved: 2022-03-21T13:09:17+00:00
+
+
+---How to decode data files---
+
+Sleep stage codes in the filenames/Case IDs:
+
+"SO#" = sleep onset reports collected after <=90sec of sleep. "#" represents the order in which reports were collected.
+NREM = reports intended to be collected following at least 10min of PSG-defined N2
+REM = reports intended to be collected following at least 5min of PSG-defined REM sleep
+Morning = a final report collected on morning awakening, regardless of sleep stage
+
+The INTENDED sleep stage indicated by these labels does not necessarily match the ACTUAL sleep stage of the last epoch just before the dream report marker, as listed in records.csv. This is for two reasons:
+ 1 - Sometimes, research assistants inadvertantly elicited reports from the wrong sleep stage
+ 2 - In other cases, the dream report marker was delayed for a few seconds, and a few seconds of wake preceeds the dream report marker, even though the participant had mostly been asleep prior to the marker.
+
+In our publication referenced here, we excluded reports that were concluded to be from the incorrect pre-awakening stage.
+In this archive, we include those reports.
+
+In some cases, participants were actually scored as being AWAKE just before a report was elicited.
+In records.csv, 0 = last epoch before the report was WAKE.
+
+--Treatment group codes--
+
+N/A
+
+
+---Experimental description---
+
+See also Zhang & Wamsley 2019.
+
+Participants
+Participants (age 18-23) were recruited through advertisement on campus, and respondents were excluded from enrolling if they had a history of sleep or mental disorders, were currently using medications known to interfere with sleep, or had little or no prior experience playing 3D style video games (due to the goals of the larger study of which this research was a part). Participants were asked to maintain a regular sleep schedule for three consecutive nights prior to the experimental night (confirmed by sleep log), to refrain from recreational drugs or alcohol for 24hrs prior to their appointment, and not to drink caffeine after 10am on the day of the study. Participants received monetary compensation at the conclusion of the study. The study was approved by the IRB committee at Furman University in Greenville, SC.
+
+Procedure
+Participants signed informed consent prior to filling out a demographics form, Epworth sleepiness scale (Johns, 1991), and a 3-day retrospective sleep log. High-density electrode caps (BrainProducts) were used to record EEG throughout the night (58 EEG electrodes placed following the international 10-10 system). During recording, EEG signals were referenced to the contralateral mastoid to aid on-line sleep staging. Additionally, muscle tone was monitored using electromyography (EMG; bipolar chin leads) and eye movement was monitored using electrooculography (EOG; left and right outer canthus). All data were recorded at 400Hz using a Grass-Telefactor AURA amplifier with a high-pass filter at 0.1Hz. After applying the electrodes, participants were randomly assigned to either train on a virtual maze navigation task (Wamsley, Tucker, Payne, & Stickgold, 2010; Wamsley, Tucker, Payne, Benavides, & Stickgold, 2010) or complete a control task (the psychomotor vigilance task (PVT) (Dinges & Powell, 1985)). In both groups, participants also underwent a 7min eyes-closed baseline EEG recording both before and after task performance. These training procedures were a part of a larger study investigating memory reactivation following a spatial learning task and its effect on memory consolidation. The experimental group was trained on the maze navigation task prior to sleep and was tested on the same task the next morning, while the control group was trained on the PVT prior to sleep and performed maze navigation task the next morning. Results of this behavioral testing are not discussed here but will be reported in a subsequent paper. The two tasks did not substantially influence dream content as only one mentation report was judged by raters to be task-related.
+Prior to sleep, participants were given instructions on how to provide open-ended mentation reports throughout the night. Specifically, they were asked to verbally describe “everything that was going through your mind just before I called” whenever they heard the prompt “please report now”. Participants were instructed to provide as much detail as possible on their experience, regardless of whether they considered it to be a “dream” or not, and were instructed that if they cannot remember their experience or were not having an experience, they should state this instead.
+
+Participants lay down to begin a 9hr sleep opportunity at approximately 11pm. After participants entered sleep, indicated by online PSG (polysomnographic) monitoring, they were awoken periodically to provide verbal reports on their mental experience. Following our prior work, we maximized the number of report samples per participant by conducting a large number of awakenings during the sleep onset period (during which dream recall is high and participants are able to fall back to sleep quickly) combined with a smaller number of awakenings later in the night (Wamsley, Perry, Djonlagic, Reaven, & Stickgold, 2010). Up to 10 “sleep onset” dream reports were obtained during the first hour of the night, collected after 30, 60, or 90 seconds of elapsed sleep (order of latency counterbalanced across participants). As a result, sleep onset reports occurred during a mix of NREM stages -- 61% of sleep onset reports were obtained from N1, 38% from N2, and 2% from N3. Then, at least one hour after the last sleep onset awakening, one N2 sleep report (following at least 10min of PSG-defined N2) and one REM sleep dream report (following at least 5min of PSG-defined REM) were collected, also in counterbalanced order. N2 and REM report awakenings were separated by at least 30min. Participants were then allowed to sleep uninterrupted until being awoken at approximately 8am the next morning to provide a final dream report, regardless of sleep stage. These morning reports were also classified as either “REM” or “N2” reports according to the last sleep stage present prior to awakening, and analyzed along with other REM and N2 reports. As described below, 3 of these morning reports were excluded, either because the participant was in slow wave sleep rather than N2 prior to awakening, or because EEG data prior to awakening were unusable. Although systematic awakenings from slow wave sleep would be of theoretical interest, concerns regarding the possible introduction of sleep deprivation precluded conducting a larger number of nocturnal awakenings. At each report time point, participants were first awoken by calling their name, and then heard a standardized prompt “Please report now”. Verbal reports were digitally recorded and transcribed for subsequent analysis.
+
+--DREAM categorization procedure--
+
+In this study, we define a “dream” as any mental experience recalled from sleep. Reports were coded for the presence of dream content by 2 independent judges, who were blind to sleep stage. For each report, judges assessed whether the report contained a description of any mental content.
+
+Participants were not asked to assess whether they might have been dreaming, but failed to recall the dream. Therefore, the dream reports are coded only as:
+0 = no experience
+2 = experience
+
+
+---Technical details---
+
+N/A
+
+
+--Data acquisition--
+
+High-density electrode caps (BrainProducts) were used to record EEG throughout the night (58 EEG electrodes placed following the international 10-10 system). During recording, EEG signals were referenced to the contralateral mastoid to aid on-line sleep staging. Additionally, muscle tone was monitored using electromyography (EMG; bipolar chin leads) and eye movement was monitored using electrooculography (EOG; left and right outer canthus). All data were recorded at 400Hz using a Grass-Telefactor AURA amplifier with a high-pass filter at 0.1Hz.
+
+
+--Data preprocessing--
+
+These data have been filtered a 0.3-35Hz, and a 60Hz notch filter is applied.
+
+Eye channels are referenced to the contralateral mastoid.
+The two chin leads are referenced to eachother.
+EEG channels are currently unreferenced -- prior to analysis, an appropriate EEG reference needs to be selected.
+
+A1 = left mastiod
+A2 = right mastiod
+
+EEG electrodes labeled according to the 10-10 system.
+Ground electrode was placed on the forehead.

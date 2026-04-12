@@ -1,7 +1,42 @@
+dataset_name: dream
+
+# ---------------------------------------------------------------------------
+# Input paths
+# ---------------------------------------------------------------------------
+# Directory containing per-subject preprocessed epoch .npz files.
+# Each file was written by preprocess_dream_eeg.py and contains a
+# `source_files` array that carries the original EDF filename per epoch.
 epochs_dir: data/processed/dream/eeg/
-reports_root: data/raw/dream/
-report_file_pattern: "sub-*_dream.txt"
-embedding_model: "all-MiniLM-L6-v2"
+
+# Root directory of the Zhang & Wamsley 2019 release.
+dataset_root: "data/processed/dream/Zhang & Wamsley 2019/Data"
+
+# Path to the dream-report CSV.
+# Required columns:  Subject ID | Case ID | Filename | Text of Report
+# The "Filename" column must match EDF basenames exactly
+# (e.g. "subject010_REM.edf").
+reports_csv: "data/processed/dream/Zhang & Wamsley 2019/Data/Reports.csv"
+
+# Fallback: glob pattern searched under dataset_root when reports_csv is
+# absent or when individual .txt files complement the CSV.
+report_txt_pattern: "subject*_*.txt"
+
+# ---------------------------------------------------------------------------
+# Alignment strategy
+# ---------------------------------------------------------------------------
+# Segment types for which alignment should be attempted.
+# If a segment has no matching report row, it is silently skipped.
+# Use "all" or list segment type strings:  [REM, NREM, Morning, SO]
+align_segment_types: all
+
+# ---------------------------------------------------------------------------
+# Sentence embedding model
+# ---------------------------------------------------------------------------
+embedding_model: all-MiniLM-L6-v2
 embedding_dim: 384
-time_alignment_window: 30.0
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+# Per-subject target-embedding .npz files will be written here.
 output_dir: data/processed/dream/

@@ -1,0 +1,24 @@
+<Changed preprocessing to fit the EEG files>
+
+What was built
+Configs updated
+configs/preprocess_dream.yaml — updated raw_root to point at the actual PSG directory (data/processed/dream/Zhang & Wamsley 2019/Data/PSG), added segment_labels (REM=4, NREM=2, Morning=5, SO=6), morning_action, and summary_dir
+configs/align_reports.yaml — added reports_csv pointing to the CSV discovered in the dataset, dataset_root, align_segment_types, removed the per-subject .txt assumption
+New modules
+src/data/inspect_dream_dataset.py — scans the PSG directory, parses all filenames via parse_dream_filename, computes per-subject/per-type stats, flags missing SO indices or base segments, probes sample EDFs with MNE, writes DATASET_CARD.md and inspection_report.json
+src/data/preprocess_dream_eeg.py — full pipeline: discover → filter → epoch → reject → post-collection channel intersection → z-score → save .npz + JSON summary. Labels come from filenames, not annotations.
+src/data/align_dream_reports.py — loads Reports.csv, indexes by EDF basename, matches each unique source_file in the epochs NPZ, encodes with SentenceTransformer, broadcasts to all matching epochs
+Tests
+tests/test_preprocess_dream_eeg.py — 32 tests, all passing: filename parsing, label mapping, channel picking fallback, filter/resample, rejection, z-score, full pipeline with monkeypatching, channel intersection, morning_action=exclude, .npz roundtrip, integration test
+Key design decisions and assumptions
+You need to confirm these manually:
+
+Reports.csv column names — align_dream_reports.py assumes columns named exactly "Filename" and "Text of Report". Run head -1 "data/processed/dream/Zhang & Wamsley 2019/Data/Reports.csv" to confirm (the existing head -3 output shows they match).
+
+NREM is undifferentiated — all NREM files are labeled 2 (N2 default). If the dataset distinguishes N1/N2/N3 via annotations, you can inspect raw.annotations from the output of probe_edf_sample and extend the label logic.
+
+Morning segments — set to morning_action: include with label 5. Change to exclude in the config if you don't want them in training.
+
+Channel layout — the pipeline computes the intersection of EEG channels across all a subject's files and trims all segments to match. If channels differ drastically across subjects, each subject's .npz will have a different ch_names — the model layer will need to handle this.
+
+SO segments share one label (6) — SO1 through SO10 are all mapped to 6. If you want per-index labels, adjust segment_labels in the config and the label_from_segment_type function.

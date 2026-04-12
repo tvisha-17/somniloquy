@@ -1,18 +1,74 @@
 dataset_name: dream
-raw_root: data/raw/dream
+
+# ---------------------------------------------------------------------------
+# Input paths
+# ---------------------------------------------------------------------------
+# Directory containing per-subject, per-condition EDF files.
+# Filename convention: subject<NNN>_<SegmentType>[<Index>].edf
+#   e.g.  subject010_REM.edf
+#         subject010_NREM.edf
+#         subject010_Morning.edf
+#         subject010_SO1.edf  …  subject010_SO10.edf
+raw_root: data/processed/dream/Zhang & Wamsley 2019/Data/PSG
+
+# Which subjects to process.  Use "all" or provide a list of 3-digit ID
+# strings, e.g. ["010", "026", "042"]
 subjects: all
+
+# ---------------------------------------------------------------------------
+# EEG bandpass filter  (Hz)
+# ---------------------------------------------------------------------------
 l_freq: 0.5
 h_freq: 40.0
+
+# Notch filter.  50 Hz for Europe/Asia; 60 Hz for North America.
 notch_freqs: [50.0]
-epoch_duration: 2.0
-overlap: 0.5
-reject_threshold: 200.0e-6
-target_sfreq: 256
+
+# ---------------------------------------------------------------------------
+# Resampling
+# ---------------------------------------------------------------------------
+target_sfreq: 256   # Hz
+
+# ---------------------------------------------------------------------------
+# Epoching
+# ---------------------------------------------------------------------------
+epoch_duration: 2.0   # seconds per epoch
+overlap: 0.5          # fractional overlap  (0.5 → 50 %)
+
+# ---------------------------------------------------------------------------
+# Artifact rejection
+# ---------------------------------------------------------------------------
+reject_threshold: 200.0e-6   # peak-to-peak threshold in Volts
+
+# Subjects with fewer retained epochs than this value are skipped entirely.
 min_epochs: 100
-sleep_stage_mapping:
-  "0": W
-  "1": N1
-  "2": N2
-  "3": N3
-  "4": REM
+
+# ---------------------------------------------------------------------------
+# Segment-type → sleep-stage label mapping
+# Labels are inferred from EDF filenames; annotations are preserved as
+# metadata but are NOT the primary label source.
+#
+# Standard AASM codes:  W=0  N1=1  N2=2  N3=3  REM=4
+# Extended codes used here for non-standard segments:
+#   Morning  → 5   (morning wakefulness / recall interview)
+#   SO       → 6   (sleep-onset segments SO1…SO10)
+# ---------------------------------------------------------------------------
+segment_labels:
+  REM: 4
+  NREM: 2       # Undifferentiated NREM (N2 is typical default; adjust if N-stage info exists)
+  Morning: 5
+  SO: 6         # All SO1–SO10 map to this single label
+
+# What to do with Morning-segment EDF files.
+#   include  → process and retain with label = segment_labels.Morning
+#   exclude  → skip Morning files entirely (they may be post-sleep recall, not sleep EEG)
+morning_action: include
+
+# ---------------------------------------------------------------------------
+# Output paths
+# ---------------------------------------------------------------------------
+# Per-subject epoch arrays
 output_dir: data/processed/dream/eeg/
+
+# Per-subject processing summaries (JSON)
+summary_dir: data/processed/dream/eeg/summaries/
