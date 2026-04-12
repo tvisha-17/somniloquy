@@ -10,6 +10,8 @@
 data/processed/dream/eeg/
 data/processed/dream/*.npz
 data/processed/dream/**/*.npz
+data/processed/dream/
+
 
 # Model checkpoints
 checkpoints/
