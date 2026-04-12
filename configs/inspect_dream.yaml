@@ -1,0 +1,4 @@
+raw_root: data/raw/dream
+output_card: data/processed/dream/DATASET_CARD.md
+output_report: data/processed/dream/inspection_report.json
+max_files_to_probe: 3
