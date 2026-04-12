@@ -74,8 +74,15 @@ def test_zuna_decoder_requires_3d_input():
         model(torch.randn(4, 64))
 
 
-def test_zuna_decoder_raises_importerror_without_real_zuna_dependency():
+def test_zuna_decoder_supports_explicit_cnn_mode():
     from src.models.zuna_decoder import ZUNAForSpeechDecoding
 
-    with pytest.raises(ImportError, match="zuna"):
-        ZUNAForSpeechDecoding(target_embed_dim=384)
+    model = ZUNAForSpeechDecoding(
+        ch_names=["C1", "C2", "C3", "C4"],
+        target_embed_dim=384,
+        dropout=0.0,
+        latent_dim=16,
+        backbone_mode="cnn",
+    )
+    output = model(torch.randn(2, 4, 32))
+    assert output.shape == (2, 384)

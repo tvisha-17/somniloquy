@@ -3,23 +3,23 @@ target_embeddings_dir: data/processed/dream
 split_file: data/splits/dream_splits.json
 
 zuna_model_name: Zyphra/ZUNA
-latent_dim: 1024
+latent_dim: 128
 target_embed_dim: 384
-dropout: 0.3
-backbone_mode: auto
+dropout: 0.1
+backbone_mode: cnn
 
 loss_type: cosine_mse
 cosine_weight: 0.7
 mse_weight: 0.3
 
 batch_size: 32
-lr: 0.0001
-weight_decay: 0.00001
-n_epochs: 30
-warmup_steps: 500
+lr: 0.001
+weight_decay: 0.0
+n_epochs: 3
+warmup_steps: 0
 grad_clip: 1.0
-device: cuda
+device: cpu
 
-checkpoint_dir: checkpoints/zuna_finetuned
+checkpoint_dir: checkpoints/zuna_finetuned_quick
 log_every_n_steps: 10
-val_every_n_epochs: 5
+val_every_n_epochs: 1

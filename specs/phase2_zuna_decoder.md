@@ -17,25 +17,30 @@ Expose a `ZUNAForSpeechDecoding` module that accepts preprocessed EEG windows an
   - `zuna_model_name: str`
   - `target_embed_dim: int`
   - `dropout: float`
-  - optional injected backbone or backbone factory for tests
+  - `backbone_mode: "auto" | "zuna" | "cnn"`
+  - optional injected backbone for tests or offline runs
+  - optional `ch_names: list[str]`
 
 ## Outputs
 
 - `forward(...) -> torch.Tensor` with shape `(batch, target_embed_dim)`
 - metadata on the module:
+  - resolved encoder mode
   - resolved latent dimension
-  - frozen backbone parameters
+  - frozen backbone parameters when a frozen backbone is used
 
 ## Edge Cases
 
-- Missing `zuna` package when no injected backbone is supplied: raise a clear `ImportError`
+- Missing or unusable `zuna` package in `auto` mode: log a warning and fall back to the CNN encoder
+- Missing or unusable `zuna` package in `zuna` mode: raise a clear `ImportError` or `RuntimeError`
 - Backbone returns dict/tuple/tensor instead of a direct latent tensor: resolve using adapter rules or raise `RuntimeError`
 - Input tensor is not 3D: raise `AssertionError`
 - Backbone latent is not 2D after extraction: raise `RuntimeError`
+- Channel count at inference differs from the model's configured channel count: raise `ValueError`
 
 ## Success Criteria
 
-- All backbone parameters have `requires_grad=False`
+- All frozen-backbone parameters have `requires_grad=False`
 - Dummy input of shape `(4, 64, 512)` returns `(4, 384)`
-- The module is importable even when `zuna` is absent, as long as tests inject a dummy backbone
+- The module is importable when `zuna` is absent by using either an injected backbone or `backbone_mode="cnn"`
 - INFO logging records input, latent, and output shapes

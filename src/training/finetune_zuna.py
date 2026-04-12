@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 class REMAlignedEEGDataset(Dataset):
     """In-memory dataset of REM EEG windows aligned to semantic targets."""
 
-    def __init__(self, eeg: np.ndarray, targets: np.ndarray, subject_ids: Sequence[str]):
+    def __init__(self, eeg: np.ndarray, targets: np.ndarray, subject_ids: Sequence[str], ch_names: Sequence[str]):
         if eeg.ndim != 3:
             raise ValueError(f"Expected eeg shape (n, c, t), got {eeg.shape}")
         if targets.ndim != 2:
@@ -32,15 +32,19 @@ class REMAlignedEEGDataset(Dataset):
             raise ValueError(f"Sample count mismatch: eeg={eeg.shape[0]} targets={targets.shape[0]}")
         if eeg.shape[0] != len(subject_ids):
             raise ValueError(f"Subject count mismatch: n={eeg.shape[0]} subject_ids={len(subject_ids)}")
+        if eeg.shape[1] != len(ch_names):
+            raise ValueError(f"Channel count mismatch: eeg channels={eeg.shape[1]} ch_names={len(ch_names)}")
 
         self.eeg = torch.from_numpy(eeg.astype(np.float32))
         self.targets = torch.from_numpy(targets.astype(np.float32))
         self.subject_ids = list(subject_ids)
+        self.ch_names = list(ch_names)
         logger.info(
-            "REMAlignedEEGDataset eeg_shape=%s target_shape=%s n_subjects=%d",
+            "REMAlignedEEGDataset eeg_shape=%s target_shape=%s n_subjects=%d n_channels=%d",
             tuple(self.eeg.shape),
             tuple(self.targets.shape),
             len(set(self.subject_ids)),
+            len(self.ch_names),
         )
 
     def __len__(self) -> int:
@@ -65,11 +69,13 @@ def load_aligned_rem_examples(
     subject_ids: Sequence[str],
     eeg_epochs_dir: Path,
     target_embeddings_dir: Path,
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    shared_ch_names: Optional[Sequence[str]] = None,
+) -> Tuple[np.ndarray, np.ndarray, List[str], List[str]]:
     """Load REM-only EEG examples and semantic targets for the given subjects."""
     all_eeg = []
     all_targets = []
     all_subject_refs: List[str] = []
+    effective_ch_names: Optional[List[str]] = list(shared_ch_names) if shared_ch_names is not None else None
 
     eeg_epochs_dir = Path(eeg_epochs_dir)
     target_embeddings_dir = Path(target_embeddings_dir)
@@ -91,6 +97,7 @@ def load_aligned_rem_examples(
         target_npz = np.load(str(target_path), allow_pickle=True)
 
         eeg = eeg_npz["data"].astype(np.float32)
+        ch_names = [str(name) for name in eeg_npz["ch_names"].tolist()]
         sleep_stages = eeg_npz["sleep_stages"].astype(np.int64)
         epoch_indices = target_npz["epoch_indices"].astype(np.int64)
         target_embeddings = target_npz["target_embeddings"].astype(np.float32)
@@ -118,6 +125,18 @@ def load_aligned_rem_examples(
 
         selected_indices = epoch_indices[rem_mask]
         selected_eeg = eeg[selected_indices]
+
+        if effective_ch_names is None:
+            effective_ch_names = ch_names
+        else:
+            channel_to_index = {name: index for index, name in enumerate(ch_names)}
+            missing = [name for name in effective_ch_names if name not in channel_to_index]
+            if missing:
+                raise ValueError(
+                    f"Subject {subject_id} is missing shared channels: {missing[:5]}"
+                )
+            selected_eeg = selected_eeg[:, [channel_to_index[name] for name in effective_ch_names], :]
+
         selected_targets = target_embeddings[rem_mask]
         logger.info(
             "load_aligned_rem_examples subject=%s eeg_shape=%s target_shape=%s",
@@ -140,7 +159,32 @@ def load_aligned_rem_examples(
         tuple(eeg_array.shape),
         tuple(target_array.shape),
     )
-    return eeg_array, target_array, all_subject_refs
+    return eeg_array, target_array, all_subject_refs, list(effective_ch_names or [])
+
+
+def resolve_shared_channel_names(subject_ids: Sequence[str], eeg_epochs_dir: Path) -> List[str]:
+    """Compute a stable shared channel order across a set of subjects."""
+    shared: Optional[List[str]] = None
+    for subject_id in subject_ids:
+        eeg_path = Path(eeg_epochs_dir) / f"sub-{subject_id}_epochs.npz"
+        if not eeg_path.exists():
+            continue
+        eeg_npz = np.load(str(eeg_path), allow_pickle=True)
+        ch_names = [str(name) for name in eeg_npz["ch_names"].tolist()]
+        if shared is None:
+            shared = ch_names
+        else:
+            shared_set = set(ch_names)
+            shared = [name for name in shared if name in shared_set]
+        logger.info(
+            "resolve_shared_channel_names subject=%s n_subject_channels=%d current_shared=%d",
+            subject_id,
+            len(ch_names),
+            len(shared or []),
+        )
+    if not shared:
+        raise ValueError("Could not resolve a shared channel set across the requested subjects.")
+    return shared
 
 
 def create_dataset_for_split(
@@ -148,32 +192,43 @@ def create_dataset_for_split(
     split_file: Path,
     eeg_epochs_dir: Path,
     target_embeddings_dir: Path,
+    shared_ch_names: Optional[Sequence[str]] = None,
 ) -> REMAlignedEEGDataset:
     """Create a dataset for a named split."""
     subject_ids = load_split_subject_ids(split_file, split_name)
     if not subject_ids:
         raise ValueError(f"Split {split_name!r} is empty in {split_file}")
-    eeg, targets, subject_refs = load_aligned_rem_examples(
+    eeg, targets, subject_refs, ch_names = load_aligned_rem_examples(
         subject_ids=subject_ids,
         eeg_epochs_dir=eeg_epochs_dir,
         target_embeddings_dir=target_embeddings_dir,
+        shared_ch_names=shared_ch_names,
     )
-    return REMAlignedEEGDataset(eeg=eeg, targets=targets, subject_ids=subject_refs)
+    return REMAlignedEEGDataset(eeg=eeg, targets=targets, subject_ids=subject_refs, ch_names=ch_names)
 
 
 def create_dataloaders(config: Dict[str, object]) -> Tuple[DataLoader, DataLoader]:
     """Build training and validation dataloaders from config."""
+    split_file = Path(config["split_file"])
+    eeg_epochs_dir = Path(config["eeg_epochs_dir"])
+    target_embeddings_dir = Path(config["target_embeddings_dir"])
+    train_subject_ids = load_split_subject_ids(split_file, "train")
+    val_subject_ids = load_split_subject_ids(split_file, "val")
+    shared_ch_names = resolve_shared_channel_names(train_subject_ids + val_subject_ids, eeg_epochs_dir)
+
     train_dataset = create_dataset_for_split(
         split_name="train",
-        split_file=Path(config["split_file"]),
-        eeg_epochs_dir=Path(config["eeg_epochs_dir"]),
-        target_embeddings_dir=Path(config["target_embeddings_dir"]),
+        split_file=split_file,
+        eeg_epochs_dir=eeg_epochs_dir,
+        target_embeddings_dir=target_embeddings_dir,
+        shared_ch_names=shared_ch_names,
     )
     val_dataset = create_dataset_for_split(
         split_name="val",
-        split_file=Path(config["split_file"]),
-        eeg_epochs_dir=Path(config["eeg_epochs_dir"]),
-        target_embeddings_dir=Path(config["target_embeddings_dir"]),
+        split_file=split_file,
+        eeg_epochs_dir=eeg_epochs_dir,
+        target_embeddings_dir=target_embeddings_dir,
+        shared_ch_names=shared_ch_names,
     )
     batch_size = int(config["batch_size"])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -284,11 +339,15 @@ def train_model(config: Dict[str, object], model: Optional[nn.Module] = None) ->
     train_loader, val_loader = create_dataloaders(config)
 
     if model is None:
+        ch_names = list(getattr(train_loader.dataset, "ch_names", []))
+
         model = ZUNAForSpeechDecoding(
+            ch_names=ch_names,
             zuna_model_name=str(config["zuna_model_name"]),
             target_embed_dim=int(config["target_embed_dim"]),
             dropout=float(config["dropout"]),
             latent_dim=int(config["latent_dim"]) if config.get("latent_dim") is not None else None,
+            backbone_mode=str(config.get("backbone_mode", "auto")),
         )
 
     model = model.to(device)

@@ -3,6 +3,9 @@
 import asyncio
 
 import numpy as np
+import pytest
+
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 
@@ -50,6 +53,7 @@ def test_demo_controller_playback_broadcasts_prediction_and_complete():
         data=np.zeros((2, 4, 8), dtype=np.float32),
         sleep_stages=np.array([4, 4], dtype=np.int64),
         epoch_times_s=np.array([0.0, 2.0], dtype=np.float64),
+        ch_names=["C1", "C2", "C3", "C4"],
         sfreq=256.0,
         subject_id="demo",
     )
@@ -93,6 +97,7 @@ def test_create_app_serves_dashboard_and_health(tmp_path):
         data=np.zeros((1, 4, 8), dtype=np.float32),
         sleep_stages=np.array([4], dtype=np.int64),
         epoch_times_s=np.array([0.0], dtype=np.float64),
+        ch_names=["C1", "C2", "C3", "C4"],
         sfreq=256.0,
         subject_id="demo",
     )

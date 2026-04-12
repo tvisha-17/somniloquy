@@ -127,6 +127,7 @@ class ReplayEpochSource:
     data: np.ndarray
     sleep_stages: np.ndarray
     epoch_times_s: np.ndarray
+    ch_names: list[str]
     sfreq: float
     subject_id: str
 
@@ -137,6 +138,7 @@ def load_replay_source(path: Path) -> ReplayEpochSource:
     data = payload["data"].astype(np.float32)
     sleep_stages = payload["sleep_stages"].astype(np.int64)
     epoch_times_s = payload["epoch_times_s"].astype(np.float64)
+    ch_names = [str(name) for name in payload["ch_names"].tolist()]
     sfreq = float(payload["sfreq"])
     subject_id = str(payload["subject_id"])
     logger.info(
@@ -149,12 +151,13 @@ def load_replay_source(path: Path) -> ReplayEpochSource:
         data=data,
         sleep_stages=sleep_stages,
         epoch_times_s=epoch_times_s,
+        ch_names=ch_names,
         sfreq=sfreq,
         subject_id=subject_id,
     )
 
 
-def load_realtime_model(config: dict) -> torch.nn.Module:
+def load_realtime_model(config: dict, source: Optional[ReplayEpochSource] = None) -> torch.nn.Module:
     """Load the runtime model from checkpoint or create a baseline fallback."""
     model_mode = str(config.get("model_mode", "checkpoint"))
     if model_mode == "heuristic_baseline":
@@ -165,13 +168,18 @@ def load_realtime_model(config: dict) -> torch.nn.Module:
     if not checkpoint_path.exists():
         raise ValueError(f"Checkpoint file not found: {checkpoint_path}")
 
-    model = ZUNAForSpeechDecoding(
-        zuna_model_name=str(config["zuna_model_name"]),
-        target_embed_dim=int(config["target_embed_dim"]),
-        dropout=float(config["dropout"]),
-        latent_dim=int(config.get("latent_dim", 1024)),
-    )
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint_config = dict(checkpoint.get("config", {}))
+    ch_names = [] if source is None else list(source.ch_names)
+
+    model = ZUNAForSpeechDecoding(
+        ch_names=ch_names,
+        zuna_model_name=str(checkpoint_config.get("zuna_model_name", config["zuna_model_name"])),
+        target_embed_dim=int(checkpoint_config.get("target_embed_dim", config["target_embed_dim"])),
+        dropout=float(checkpoint_config.get("dropout", config["dropout"])),
+        latent_dim=int(checkpoint_config.get("latent_dim", config.get("latent_dim", 1024))),
+        backbone_mode=str(checkpoint_config.get("backbone_mode", config.get("backbone_mode", "auto"))),
+    )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
     return model
@@ -272,7 +280,7 @@ def build_demo_controller(config: dict, model: Optional[torch.nn.Module] = None)
         required_consecutive=int(config.get("required_consecutive", 3)),
     )
     phrase_bank = PhraseBank.from_target_embedding_dir(Path(config["target_embeddings_dir"]))
-    runtime_model = model or load_realtime_model(config)
+    runtime_model = model or load_realtime_model(config, source=source)
     decoder = RealTimeSpeechDecoder(
         model=runtime_model,
         phrase_bank=phrase_bank,

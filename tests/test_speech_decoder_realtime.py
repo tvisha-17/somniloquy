@@ -108,3 +108,18 @@ def test_phrase_bank_loads_from_target_embedding_dir(tmp_path):
     phrase_bank = PhraseBank.from_target_embedding_dir(tmp_path)
     assert phrase_bank.phrases == ["flying", "running"]
     assert tuple(phrase_bank.embeddings.shape) == (2, 2)
+
+
+def test_phrase_bank_loads_from_per_epoch_report_texts(tmp_path):
+    from src.realtime.speech_decoder_realtime import PhraseBank
+
+    np.savez(
+        tmp_path / "sub-01_target_embeddings.npz",
+        epoch_indices=np.array([0, 1, 2], dtype=np.int64),
+        target_embeddings=np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]], dtype=np.float32),
+        report_texts=np.array(["flying", "flying", "running"], dtype=object),
+    )
+
+    phrase_bank = PhraseBank.from_target_embedding_dir(tmp_path)
+    assert phrase_bank.phrases == ["flying", "running"]
+    assert tuple(phrase_bank.embeddings.shape) == (2, 2)

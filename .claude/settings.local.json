@@ -4,7 +4,8 @@
       "Skill(gsd-execute-phase)",
       "Skill(gsd-execute-phase:*)",
       "Skill(gsd-plan-phase)",
-      "Skill(gsd-plan-phase:*)"
+      "Skill(gsd-plan-phase:*)",
+      "Read(//Users/kaho/Library/Python/3.11/lib/python/site-packages/zuna/inference/AY2l/lingua/apps/AY2latent_bci/**)"
     ]
   }
 }

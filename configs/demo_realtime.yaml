@@ -1,12 +1,12 @@
-replay_epoch_file: data/processed/dream/eeg/sub-demo_epochs.npz
+replay_epoch_file: data/processed/dream/eeg/sub-010_epochs.npz
 target_embeddings_dir: data/processed/dream
 
 model_mode: checkpoint
-checkpoint_path: checkpoints/zuna_finetuned/best.pt
+checkpoint_path: checkpoints/zuna_finetuned_quick/best.pt
 zuna_model_name: Zyphra/ZUNA
-latent_dim: 1024
+latent_dim: 128
 target_embed_dim: 384
-dropout: 0.3
+dropout: 0.1
 device: cpu
 
 host: 127.0.0.1

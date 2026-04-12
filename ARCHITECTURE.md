@@ -21,13 +21,18 @@ Somniloquy converts REM-labeled DREAM EEG into semantic dream-report embeddings 
 
 - `src/models/zuna_decoder.py`
   - Owns the speech-decoding model.
-  - Loads a frozen EEG backbone and projects backbone latents into 384-dim semantic space.
-  - Exposes a single `forward(x, electrode_coords=None, mask=None)` interface with shape checks and INFO-level shape logging.
+  - Loads either:
+    - the frozen ZUNA encoder when available,
+    - an injected frozen backbone for tests, or
+    - a lightweight CNN encoder for offline fast-start training/demo checkpoints.
+  - Projects encoder latents into 384-dim semantic space.
+  - Exposes a single `forward(x)` interface with shape checks and INFO-level shape logging.
 
 ### 3. Training Layer
 
 - `src/training/finetune_zuna.py`
   - Loads REM-only aligned training examples from the processed `.npz` artifacts.
+  - Harmonizes subject channel layouts by intersecting channel names across the requested split and reordering each subject to the shared channel order before concatenation.
   - Trains only the decoding head with combined cosine + MSE loss.
   - Evaluates held-out subjects with cosine similarity.
   - Stops on NaN gradients and saves the best checkpoint.
@@ -40,6 +45,7 @@ Somniloquy converts REM-labeled DREAM EEG into semantic dream-report embeddings 
   - Retrieves top phrases from a candidate bank, computes abstention confidence, and applies temporal smoothing before emission.
 - `src/realtime/demo_server.py`
   - Streams pre-recorded epochs as simulated real-time input, publishes JSON events over WebSocket, and serves a lightweight dashboard.
+  - Reconstructs runtime models from checkpoint metadata so demo checkpoints trained with either ZUNA or CNN fallback modes can be loaded without manual config surgery.
 
 ## Data Contracts
 
@@ -84,6 +90,7 @@ This keeps the architecture aligned with `AGENTS.md` while making the unverified
   - default path: a lightweight heuristic spectral scorer that works offline
   - demo path: optional stage hints from preprocessed labeled epochs for simulated playback
 - The phrase bank will be built from saved target-embedding files when available, so retrieval does not depend on a separate text encoder at demo time.
+- The phrase-bank loader accepts both the original scalar `report_text` artifact format and the newer per-epoch `report_texts` artifact format.
 - The demo server will use FastAPI + WebSocket because those packages are already available in the environment and keep the dashboard single-process.
 
 ## Logging Policy
@@ -106,3 +113,6 @@ This keeps the architecture aligned with `AGENTS.md` while making the unverified
 - 2026-04-11: Created the architecture document because `AGENTS.md` requires it and the file was missing.
 - 2026-04-11: Recorded the temporary backbone-adapter decision because the real `zuna` package is unavailable in this environment.
 - 2026-04-11: Expanded the runtime layer to cover REM detection, phrase retrieval/abstention, and the FastAPI demo server for Phase 3.
+- 2026-04-11: Updated the model/training architecture so a fast CNN fallback can produce a first checkpoint while the real ZUNA path remains available.
+- 2026-04-11: Recorded channel-layout harmonization across subjects as a required training step because processed DREAM subjects do not share identical channel counts.
+- 2026-04-11: Updated demo checkpoint loading to rebuild the wrapper from checkpoint metadata and replay-file channel names.

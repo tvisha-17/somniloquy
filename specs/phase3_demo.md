@@ -36,6 +36,7 @@ Run a local demo that replays preprocessed DREAM epochs as a real-time stream, p
 - no candidate embeddings found: raise `ValueError`
 - no connected WebSocket clients: playback still runs without error
 - playback source exhausted: emit a final completion event
+- checkpoint was trained with a non-default wrapper mode or channel layout: reconstruct the runtime model from checkpoint config plus replay-file `ch_names`, rather than assuming the default ZUNA path
 
 ## Success Criteria
 

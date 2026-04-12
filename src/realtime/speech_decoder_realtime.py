@@ -52,11 +52,24 @@ class PhraseBank:
 
         for path in sorted(target_embeddings_dir.glob("sub-*_target_embeddings.npz")):
             payload = np.load(str(path), allow_pickle=True)
-            phrase = str(payload["report_text"]).strip()
-            if not phrase:
-                continue
             embeddings = payload["target_embeddings"].astype(np.float32)
-            phrase_to_embeddings.setdefault(phrase, []).append(embeddings.mean(axis=0))
+            if "report_text" in payload.files:
+                phrase = str(payload["report_text"]).strip()
+                if phrase:
+                    phrase_to_embeddings.setdefault(phrase, []).append(embeddings.mean(axis=0))
+                continue
+
+            if "report_texts" in payload.files:
+                report_texts = np.asarray(payload["report_texts"], dtype=object)
+                for phrase in np.unique(report_texts):
+                    phrase = str(phrase).strip()
+                    if not phrase:
+                        continue
+                    phrase_mask = report_texts == phrase
+                    phrase_to_embeddings.setdefault(phrase, []).append(embeddings[phrase_mask].mean(axis=0))
+                continue
+
+            logger.warning("Skipping %s because it does not contain report_text or report_texts.", path.name)
 
         if not phrase_to_embeddings:
             raise ValueError(f"No target embedding files found under {target_embeddings_dir}")
