@@ -11,6 +11,7 @@ data/processed/dream/eeg/
 data/processed/dream/*.npz
 data/processed/dream/**/*.npz
 data/processed/dream/
+data/
 
 
 # Model checkpoints
