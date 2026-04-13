@@ -34,6 +34,10 @@ align_segment_types: all
 # ---------------------------------------------------------------------------
 embedding_model: all-MiniLM-L6-v2
 embedding_dim: 384
+min_report_chars: 20
+min_report_alpha_chars: 10
+drop_report_patterns: ["n/a", "na", "none"]
+filler_words: ["umm", "um", "uh", "uhh", "uhm", "erm", "hmm", "mm"]
 
 # ---------------------------------------------------------------------------
 # Output

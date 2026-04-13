@@ -63,6 +63,8 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 _CSV_COL_FILENAME = "Filename"
 _CSV_COL_TEXT = "Text of Report"
+_DEFAULT_FILLER_WORDS = ("umm", "um", "uh", "uhh", "uhm", "erm", "hmm", "mm")
+_DEFAULT_DROP_PATTERNS = ("n/a", "na", "none")
 
 # ---------------------------------------------------------------------------
 # Filename parser  (mirrors parse_dream_filename in other modules)
@@ -194,6 +196,36 @@ def encode_reports_batch(texts: List[str], model) -> np.ndarray:
     return embeddings
 
 
+def clean_report_text(text: str, cfg: Optional[dict] = None) -> str:
+    """Normalize report text and remove lightweight filler words."""
+    cfg = cfg or {}
+    filler_words = [str(word).strip() for word in cfg.get("filler_words", list(_DEFAULT_FILLER_WORDS))]
+    cleaned = " ".join(str(text).replace("\n", " ").split())
+    for filler in filler_words:
+        if filler:
+            cleaned = re.sub(rf"\b{re.escape(filler)}\b", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.;:-")
+    return cleaned.strip()
+
+
+def is_report_usable(text: str, cfg: Optional[dict] = None) -> bool:
+    """Return True when a cleaned report contains enough signal to train on."""
+    cfg = cfg or {}
+    cleaned = clean_report_text(text, cfg)
+    min_report_chars = int(cfg.get("min_report_chars", 20))
+    min_report_alpha_chars = int(cfg.get("min_report_alpha_chars", 10))
+    drop_patterns = {str(item).strip().lower() for item in cfg.get("drop_report_patterns", list(_DEFAULT_DROP_PATTERNS))}
+    alpha_chars = sum(1 for char in cleaned if char.isalpha())
+
+    if len(cleaned) < min_report_chars:
+        return False
+    if alpha_chars < min_report_alpha_chars:
+        return False
+    if cleaned.lower() in drop_patterns:
+        return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Subject epoch loading
 # ---------------------------------------------------------------------------
@@ -302,10 +334,19 @@ def align_subject(
             continue
 
         report_text = report_index[source_name]
+        cleaned_report_text = clean_report_text(report_text, cfg)
+        if not is_report_usable(cleaned_report_text, cfg):
+            logger.info(
+                "align_subject: subject %s  skipping source %s because cleaned report is too weak: %r",
+                subject_id,
+                source_name,
+                cleaned_report_text,
+            )
+            continue
 
         # Encode (cache in caller for large batches; here we encode per source)
         try:
-            embedding = encode_report(report_text, model)
+            embedding = encode_report(cleaned_report_text, model)
         except Exception as exc:
             logger.warning(
                 "align_subject: subject %s  encoding failed for %s — %s",
@@ -318,7 +359,7 @@ def align_subject(
         matched_embeddings.extend([embedding] * n)
         matched_seg_types.extend([seg_type_for_source] * n)
         matched_src_files.extend([source_name] * n)
-        matched_report_texts.extend([report_text] * n)
+        matched_report_texts.extend([cleaned_report_text] * n)
 
         logger.info(
             "align_subject: subject %s  source=%s  n_epochs=%d  report_len=%d",

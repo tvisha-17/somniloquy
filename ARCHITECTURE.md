@@ -14,6 +14,7 @@ Somniloquy converts REM-labeled DREAM EEG into semantic dream-report embeddings 
   - Loads raw EEG, keeps EEG channels, filters, notches, resamples, epochs, rejects artifacts, normalizes per subject, and writes `data/processed/dream/eeg/sub-<id>_epochs.npz`.
 - `src/data/align_reports.py`
   - Encodes dream reports into 384-dim semantic targets and aligns them to REM epochs.
+  - Filters out tiny/empty reports and removes lightweight filler words before embedding so low-information text does not become a training target.
 - `src/data/make_splits.py`
   - Produces subject-level train/val/test splits in `data/splits/dream_splits.json`.
 
@@ -34,8 +35,28 @@ Somniloquy converts REM-labeled DREAM EEG into semantic dream-report embeddings 
   - Loads REM-only aligned training examples from the processed `.npz` artifacts.
   - Harmonizes subject channel layouts by intersecting channel names across the requested split and reordering each subject to the shared channel order before concatenation.
   - Trains only the decoding head with combined cosine + MSE loss.
-  - Evaluates held-out subjects with cosine similarity.
-  - Stops on NaN gradients and saves the best checkpoint.
+  - Evaluates held-out subjects with cosine similarity and can optionally compute phrase-bank retrieval metrics (`top1`, `top5`, `top10`, `mrr`) when validation samples expose ground-truth phrases.
+  - Stops on NaN gradients and saves the best checkpoint with explicit `best_epoch` metadata.
+
+### 3.5 Evaluation Layer
+
+- `src/evaluation/retrieval.py`
+  - Normalizes predicted and bank embeddings, computes cosine similarity against a candidate phrase bank, ranks candidates, and reports retrieval metrics.
+  - Accepts either direct bank indices or phrase strings as the ground-truth mapping, so it can be used by both offline validation and later demo-analysis scripts without a large wrapper framework.
+
+### 3.6 Emotion Classification Branch
+
+- `src/data/inspect_eeg_emotions.py`
+  - Audits the emotion-labeled EEG dataset, samples `.mat` clip structure, and writes `data/processed/eeg_emotions/DATASET_CARD.md`.
+- `src/data/eeg_emotions_dataset.py`
+  - Parses clip metadata from filenames, caches fixed-length windows, supports grouped DEED label remapping, and builds subject-wise or sample-wise splits.
+- `src/models/eeg_emotion_classifier.py`
+  - Reuses the existing EEG encoder pattern and swaps the semantic retrieval head for a compact 3-class classifier.
+- `src/training/train_eeg_emotions.py`
+  - Trains the classifier with cross-entropy and selects checkpoints by validation macro F1.
+  - Supports optional class-weighted loss, label smoothing, and lightweight EEG augmentation so quick baseline tuning stays inside the current training loop.
+- `src/evaluation/evaluate_eeg_emotions.py`
+  - Computes balanced accuracy, macro precision/recall/F1, confusion matrix, and permutation-test p-values.
 
 ### 4. Runtime Layer
 
@@ -116,3 +137,8 @@ This keeps the architecture aligned with `AGENTS.md` while making the unverified
 - 2026-04-11: Updated the model/training architecture so a fast CNN fallback can produce a first checkpoint while the real ZUNA path remains available.
 - 2026-04-11: Recorded channel-layout harmonization across subjects as a required training step because processed DREAM subjects do not share identical channel counts.
 - 2026-04-11: Updated demo checkpoint loading to rebuild the wrapper from checkpoint metadata and replay-file channel names.
+- 2026-04-12: Added report-text filtering/cleaning at alignment time and explicit best-epoch metadata in training outputs.
+- 2026-04-12: Added a lightweight retrieval-evaluation layer so validation can be measured against a phrase bank instead of relying on raw cosine similarity alone.
+- 2026-04-12: Added a fast emotion-classification branch that reuses the existing EEG encoder workflow with a small 3-class head and subject-wise evaluation where possible.
+- 2026-04-12: Added quick-tuning support for the emotion branch with per-recording normalization, lightweight augmentation, and class-balanced regularization inside the existing training path.
+- 2026-04-12: Added configurable DEED label grouping so raw `E0-E5` codes can be collapsed into negative/neutral/positive without changing the rest of the pipeline.

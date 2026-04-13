@@ -14,6 +14,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader, Dataset
 
+from src.evaluation.retrieval import evaluate_retrieval, load_phrase_bank_from_target_dir
 from src.models.zuna_decoder import ZUNAForSpeechDecoding
 from src.utils.logging import get_logger
 
@@ -23,7 +24,14 @@ logger = get_logger(__name__)
 class REMAlignedEEGDataset(Dataset):
     """In-memory dataset of REM EEG windows aligned to semantic targets."""
 
-    def __init__(self, eeg: np.ndarray, targets: np.ndarray, subject_ids: Sequence[str], ch_names: Sequence[str]):
+    def __init__(
+        self,
+        eeg: np.ndarray,
+        targets: np.ndarray,
+        subject_ids: Sequence[str],
+        ch_names: Sequence[str],
+        target_texts: Optional[Sequence[str]] = None,
+    ):
         if eeg.ndim != 3:
             raise ValueError(f"Expected eeg shape (n, c, t), got {eeg.shape}")
         if targets.ndim != 2:
@@ -34,11 +42,14 @@ class REMAlignedEEGDataset(Dataset):
             raise ValueError(f"Subject count mismatch: n={eeg.shape[0]} subject_ids={len(subject_ids)}")
         if eeg.shape[1] != len(ch_names):
             raise ValueError(f"Channel count mismatch: eeg channels={eeg.shape[1]} ch_names={len(ch_names)}")
+        if target_texts is not None and eeg.shape[0] != len(target_texts):
+            raise ValueError(f"Target text count mismatch: n={eeg.shape[0]} target_texts={len(target_texts)}")
 
         self.eeg = torch.from_numpy(eeg.astype(np.float32))
         self.targets = torch.from_numpy(targets.astype(np.float32))
         self.subject_ids = list(subject_ids)
         self.ch_names = list(ch_names)
+        self.target_texts = list(target_texts) if target_texts is not None else None
         logger.info(
             "REMAlignedEEGDataset eeg_shape=%s target_shape=%s n_subjects=%d n_channels=%d",
             tuple(self.eeg.shape),
@@ -70,11 +81,12 @@ def load_aligned_rem_examples(
     eeg_epochs_dir: Path,
     target_embeddings_dir: Path,
     shared_ch_names: Optional[Sequence[str]] = None,
-) -> Tuple[np.ndarray, np.ndarray, List[str], List[str]]:
+) -> Tuple[np.ndarray, np.ndarray, List[str], List[str], List[str]]:
     """Load REM-only EEG examples and semantic targets for the given subjects."""
     all_eeg = []
     all_targets = []
     all_subject_refs: List[str] = []
+    all_target_texts: List[str] = []
     effective_ch_names: Optional[List[str]] = list(shared_ch_names) if shared_ch_names is not None else None
 
     eeg_epochs_dir = Path(eeg_epochs_dir)
@@ -138,6 +150,12 @@ def load_aligned_rem_examples(
             selected_eeg = selected_eeg[:, [channel_to_index[name] for name in effective_ch_names], :]
 
         selected_targets = target_embeddings[rem_mask]
+        if "report_texts" in target_npz.files:
+            report_texts = np.asarray(target_npz["report_texts"], dtype=object)[rem_mask]
+            selected_texts = [str(text) for text in report_texts.tolist()]
+        else:
+            report_text = str(target_npz["report_text"]).strip() if "report_text" in target_npz.files else ""
+            selected_texts = [report_text] * int(selected_targets.shape[0])
         logger.info(
             "load_aligned_rem_examples subject=%s eeg_shape=%s target_shape=%s",
             subject_id,
@@ -148,6 +166,7 @@ def load_aligned_rem_examples(
         all_eeg.append(selected_eeg)
         all_targets.append(selected_targets)
         all_subject_refs.extend([subject_id] * selected_eeg.shape[0])
+        all_target_texts.extend(selected_texts)
 
     if not all_eeg:
         raise ValueError("No REM-aligned examples were found for the requested split.")
@@ -159,7 +178,7 @@ def load_aligned_rem_examples(
         tuple(eeg_array.shape),
         tuple(target_array.shape),
     )
-    return eeg_array, target_array, all_subject_refs, list(effective_ch_names or [])
+    return eeg_array, target_array, all_subject_refs, list(effective_ch_names or []), all_target_texts
 
 
 def resolve_shared_channel_names(subject_ids: Sequence[str], eeg_epochs_dir: Path) -> List[str]:
@@ -198,13 +217,19 @@ def create_dataset_for_split(
     subject_ids = load_split_subject_ids(split_file, split_name)
     if not subject_ids:
         raise ValueError(f"Split {split_name!r} is empty in {split_file}")
-    eeg, targets, subject_refs, ch_names = load_aligned_rem_examples(
+    eeg, targets, subject_refs, ch_names, target_texts = load_aligned_rem_examples(
         subject_ids=subject_ids,
         eeg_epochs_dir=eeg_epochs_dir,
         target_embeddings_dir=target_embeddings_dir,
         shared_ch_names=shared_ch_names,
     )
-    return REMAlignedEEGDataset(eeg=eeg, targets=targets, subject_ids=subject_refs, ch_names=ch_names)
+    return REMAlignedEEGDataset(
+        eeg=eeg,
+        targets=targets,
+        subject_ids=subject_refs,
+        ch_names=ch_names,
+        target_texts=target_texts,
+    )
 
 
 def create_dataloaders(config: Dict[str, object]) -> Tuple[DataLoader, DataLoader]:
@@ -273,6 +298,43 @@ def evaluate_model(model: nn.Module, dataloader: DataLoader, device: torch.devic
     return float(merged.mean().item())
 
 
+def evaluate_model_retrieval(
+    model: nn.Module,
+    dataloader: DataLoader,
+    device: torch.device,
+    *,
+    bank_phrases: Sequence[str],
+    bank_embeddings: np.ndarray,
+    top_ks: Sequence[int] = (1, 5, 10),
+) -> Dict[str, float]:
+    """Evaluate the model by retrieving against a phrase bank."""
+    target_texts = getattr(dataloader.dataset, "target_texts", None)
+    if target_texts is None:
+        raise ValueError("Validation dataset is missing target_texts required for retrieval evaluation.")
+
+    predictions = []
+    model.eval()
+    with torch.no_grad():
+        for eeg_batch, _target_batch in dataloader:
+            eeg_batch = eeg_batch.to(device)
+            logger.info("evaluate_model_retrieval eeg_batch_shape=%s", tuple(eeg_batch.shape))
+            pred_batch = model(eeg_batch)
+            predictions.append(pred_batch.cpu().numpy().astype(np.float32))
+
+    if not predictions:
+        raise ValueError("Validation dataloader produced no batches.")
+
+    pred_embeddings = np.concatenate(predictions, axis=0)
+    metrics = evaluate_retrieval(
+        predicted_embeddings=pred_embeddings,
+        bank_embeddings=bank_embeddings,
+        target_phrases=target_texts,
+        bank_phrases=bank_phrases,
+        top_ks=top_ks,
+    )
+    return metrics
+
+
 def _resolve_device(device_name: str) -> torch.device:
     if device_name.startswith("cuda") and not torch.cuda.is_available():
         logger.warning("CUDA requested but unavailable; falling back to CPU.")
@@ -323,6 +385,7 @@ def save_checkpoint(
     checkpoint_path = checkpoint_dir / "best.pt"
     payload = {
         "epoch": epoch_index,
+        "best_epoch": epoch_index,
         "val_cosine_similarity": val_cosine_similarity,
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
@@ -358,12 +421,22 @@ def train_model(config: Dict[str, object], model: Optional[nn.Module] = None) ->
         weight_decay=float(config["weight_decay"]),
     )
     scheduler = _build_warmup_scheduler(optimizer, warmup_steps=int(config["warmup_steps"]))
+    retrieval_bank = None
+    retrieval_top_ks = tuple(config.get("retrieval_top_ks", (1, 5, 10)))
+    retrieval_bank_dir = config.get("retrieval_bank_dir")
+    if retrieval_bank_dir:
+        retrieval_bank = load_phrase_bank_from_target_dir(Path(str(retrieval_bank_dir)))
 
     history: Dict[str, List[float]] = {
         "train_loss": [],
         "val_cosine_similarity": [],
     }
+    if retrieval_bank is not None:
+        for k in retrieval_top_ks:
+            history[f"val_top{int(k)}"] = []
+        history["val_mrr"] = []
     best_val = float("-inf")
+    best_epoch: Optional[int] = None
     best_checkpoint_path: Optional[Path] = None
     global_step = 0
 
@@ -424,14 +497,34 @@ def train_model(config: Dict[str, object], model: Optional[nn.Module] = None) ->
         if should_validate:
             val_cosine_similarity = evaluate_model(model, val_loader, device)
             history["val_cosine_similarity"].append(val_cosine_similarity)
-            logger.info(
-                "epoch=%d train_loss=%.6f val_cosine_similarity=%.6f",
-                epoch_index,
-                history["train_loss"][-1],
-                val_cosine_similarity,
+            log_message = (
+                f"epoch={epoch_index} train_loss={history['train_loss'][-1]:.6f} "
+                f"val_cosine_similarity={val_cosine_similarity:.6f}"
             )
+            if retrieval_bank is not None:
+                bank_phrases, bank_embeddings = retrieval_bank
+                retrieval_metrics = evaluate_model_retrieval(
+                    model,
+                    val_loader,
+                    device,
+                    bank_phrases=bank_phrases,
+                    bank_embeddings=bank_embeddings,
+                    top_ks=retrieval_top_ks,
+                )
+                for k in retrieval_top_ks:
+                    history[f"val_top{int(k)}"].append(float(retrieval_metrics[f"top{int(k)}"]))
+                history["val_mrr"].append(float(retrieval_metrics["mrr"]))
+                log_message += "".join(
+                    [
+                        f" val_top{int(k)}={retrieval_metrics[f'top{int(k)}']:.6f}"
+                        for k in retrieval_top_ks
+                    ]
+                )
+                log_message += f" val_mrr={retrieval_metrics['mrr']:.6f}"
+            logger.info(log_message)
             if val_cosine_similarity > best_val:
                 best_val = val_cosine_similarity
+                best_epoch = epoch_index
                 best_checkpoint_path = save_checkpoint(
                     checkpoint_dir=Path(config["checkpoint_dir"]),
                     model=model,
@@ -443,6 +536,7 @@ def train_model(config: Dict[str, object], model: Optional[nn.Module] = None) ->
 
     return {
         "history": history,
+        "best_epoch": best_epoch,
         "best_val_cosine_similarity": best_val,
         "best_checkpoint_path": str(best_checkpoint_path) if best_checkpoint_path is not None else None,
     }

@@ -216,6 +216,10 @@ class ZUNAForSpeechDecoding(nn.Module):
             nn.LayerNorm(self.target_embed_dim),
         )
 
+    @property
+    def feature_dim(self) -> int:
+        return int(self._encoder_dim)
+
     def _init_zuna(self, repo_id: str) -> None:
         if not _ZUNA_OK:
             raise ImportError("zuna internals are unavailable in this environment.")
@@ -283,7 +287,7 @@ class ZUNAForSpeechDecoding(nn.Module):
         assert self.encoder is not None
         return self.encoder(x)
 
-    def forward(
+    def extract_features(
         self,
         x: torch.Tensor,
         electrode_coords: Optional[torch.Tensor] = None,
@@ -303,6 +307,15 @@ class ZUNAForSpeechDecoding(nn.Module):
             raise RuntimeError(f"Expected pooled latent shape (batch, dim), got {tuple(latent.shape)}")
 
         logger.info("zuna_decoder.forward latent_shape=%s", tuple(latent.shape))
+        return latent
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        electrode_coords: Optional[torch.Tensor] = None,
+        mask: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        latent = self.extract_features(x, electrode_coords=electrode_coords, mask=mask)
         output = self.head(latent)
         logger.info("zuna_decoder.forward output_shape=%s", tuple(output.shape))
         return output

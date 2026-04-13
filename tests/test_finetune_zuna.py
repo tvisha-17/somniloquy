@@ -123,7 +123,34 @@ def test_train_model_saves_checkpoint_and_keeps_backbone_frozen(tmp_path):
     checkpoint_path = Path(result["best_checkpoint_path"])
     assert checkpoint_path.exists()
     assert result["best_val_cosine_similarity"] > float("-inf")
+    assert result["best_epoch"] in {1, 2}
     assert all(param.grad is None for param in model.backbone.parameters())
+
+
+def test_train_model_logs_optional_retrieval_metrics(tmp_path):
+    from src.models.zuna_decoder import ZUNAForSpeechDecoding
+    from src.training.finetune_zuna import train_model
+
+    _write_subject_files(tmp_path, "01", sleep_stages=[4, 4, 4], epoch_indices=[0, 1, 2], target_scale=0.5)
+    _write_subject_files(tmp_path, "02", sleep_stages=[4, 4], epoch_indices=[0, 1], target_scale=0.25)
+    _write_split_file(tmp_path / "dream_splits.json", train_ids=["01"], val_ids=["02"])
+
+    config = _base_config(tmp_path)
+    config["retrieval_bank_dir"] = str(tmp_path / "targets")
+    model = ZUNAForSpeechDecoding(
+        target_embed_dim=384,
+        dropout=0.0,
+        latent_dim=16,
+        backbone=DummyBackbone(latent_dim=16),
+    )
+
+    result = train_model(config, model=model)
+
+    assert "val_top1" in result["history"]
+    assert "val_top5" in result["history"]
+    assert "val_top10" in result["history"]
+    assert "val_mrr" in result["history"]
+    assert len(result["history"]["val_top1"]) >= 1
 
 
 class _NaNGradientLoss(torch.autograd.Function):

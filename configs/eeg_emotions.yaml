@@ -1,0 +1,38 @@
+data_dir: /Users/kaho/neurotech_hackathon/somniloquy copy/data/processed/Dream EEG with emotion labels
+processed_dir: data/processed/eeg_emotions
+batch_size: 32
+lr: 1e-3
+weight_decay: 1e-4
+n_epochs: 12
+freeze_backbone: false
+normalization_mode: per_recording
+use_subject_split: true
+val_fraction: 0.2
+test_fraction: 0.2
+random_seed: 13
+num_workers: 0
+device: cpu
+checkpoint_dir: checkpoints/eeg_emotions
+dropout: 0.3
+latent_dim: 128
+backbone_mode: cnn
+zuna_model_name: Zyphra/ZUNA
+num_classes: 3
+window_size_samples: 3200
+stride_size_samples: 3200
+target_sfreq: 200
+emotion_label_groups:
+  negative: [1, 2]
+  neutral: [3]
+  positive: [4, 5]
+use_weighted_sampler: true
+use_class_weights: true
+label_smoothing: 0.05
+use_augmentation: true
+channel_dropout_prob: 0.1
+time_mask_prob: 0.3
+time_mask_fraction: 0.1
+amplitude_jitter_std: 0.02
+early_stopping_patience: 4
+permutation_trials: 1000
+force_rebuild_cache: true
